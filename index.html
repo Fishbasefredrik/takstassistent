@@ -454,14 +454,15 @@ footer{font-size:12px;color:var(--muted);padding-top:8px}
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition; let rec=null,lytter=false;
   if(SR){ $('#mic').hidden=false; $('#mic').addEventListener('click',()=>{
     if(lytter){rec.stop();return;}
-    rec=new SR(); rec.lang='nb-NO'; rec.continuous=true; rec.interimResults=true; let base=$('#tekst').value;
-    rec.onresult=ev=>{let fin='',tmp='';for(let i=ev.resultIndex;i<ev.results.length;i++){(ev.results[i].isFinal?fin+=ev.results[i][0].transcript+' ':tmp+=ev.results[i][0].transcript);} if(fin){base=(base+' '+fin).trim();} $('#tekst').value=(base+' '+tmp).trim();};
+    rec=new SR(); rec.lang='nb-NO'; rec.continuous=true; rec.interimResults=true; let base=$('#tekst').value, sist=base;
+    // Diktering legger til i feltet. Hvis feltet er endret utenfra (Tøm, redigering) siden sist, bruker vi feltets nåværende innhold som utgangspunkt.
+    rec.onresult=ev=>{let fin='',tmp='';for(let i=ev.resultIndex;i<ev.results.length;i++){(ev.results[i].isFinal?fin+=ev.results[i][0].transcript+' ':tmp+=ev.results[i][0].transcript);} if($('#tekst').value!==sist) base=$('#tekst').value; if(fin){base=(base+' '+fin).trim();} sist=(base+' '+tmp).trim(); $('#tekst').value=sist;};
     rec.onerror=ev=>{lytter=false;$('#mic').textContent='🎙 Diktér'; if(ev.error==='not-allowed'||ev.error==='service-not-allowed'){$('#mic').hidden=true;$('#status').textContent='Mikrofon er ikke tilgjengelig her – bruk mikrofonen på tastaturet.';}};
     rec.onend=()=>{lytter=false;$('#mic').textContent='🎙 Diktér';};
     rec.start(); lytter=true; $('#mic').textContent='■ Stopp';
   });}
 
-  $('#clear').addEventListener('click',()=>{$('#tekst').value='';state.forslag=null;state.sist=null;state.histId=null;state.valg={};state.rekke=[];['#resultat','#oppsum','#besvart','#sumbar'].forEach(s=>$(s).hidden=true);$('#status').textContent='';renderRef($('#sok').value);});
+  $('#clear').addEventListener('click',()=>{if(lytter&&rec){try{rec.abort();}catch(e){}lytter=false;$('#mic').textContent='🎙 Diktér';}$('#tekst').value='';state.forslag=null;state.sist=null;state.histId=null;state.valg={};state.rekke=[];['#resultat','#oppsum','#besvart','#sumbar'].forEach(s=>$(s).hidden=true);$('#status').textContent='';renderRef($('#sok').value);});
 
   // ---- Claude
   const CONFIG_URL='https://jsgfbxbjmnyvrdauqnge.supabase.co/functions/v1/portal';

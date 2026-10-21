@@ -60,7 +60,20 @@ textarea{width:100%;min-height:140px;border:1px solid var(--line);border-radius:
 .sumbar .in{max-width:640px;margin:0 auto;display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center}
 .sumbar .tot{font-weight:600;font-size:17px;font-variant-numeric:tabular-nums}
 .sumbar .det{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
-.sumbar code{font-family:var(--mono);font-size:13px;grid-column:1/-1;overflow-wrap:anywhere;color:var(--fg)}
+/* oppsummering */
+.opl{display:grid;gap:4px}
+.opl .r{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:baseline;font-size:13px;color:var(--muted)}
+.opl .r .kode{font-size:14px;color:var(--fg)}
+.opl .r .p{font-variant-numeric:tabular-nums;white-space:nowrap}
+.priser{margin-top:10px;border-top:1px solid var(--line);padding-top:8px;display:grid;gap:4px;font-size:14px}
+.priser .r{display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.priser .r.tot{font-weight:600;font-size:17px}
+.priser .r.pas{font-weight:600;color:var(--accent)}
+.priser .r .m{color:var(--muted);font-size:13px}
+.tk.ferdig{animation:ut .18s ease-out forwards}
+@keyframes ut{to{opacity:0;transform:translateX(16px)}}
+.item .legg{float:right;margin-left:8px;border:1px solid var(--accent);background:transparent;color:var(--accent);border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;font-weight:600;cursor:pointer}
+.item .legg[disabled]{opacity:.5;cursor:default}
 details summary{cursor:pointer;color:var(--accent);font-size:13px}
 .journal li{margin-bottom:4px;font-size:13px}
 .ref input{width:100%;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;font-size:16px;background:var(--bg);color:var(--fg)}
@@ -131,26 +144,44 @@ footer{font-size:12px;color:var(--muted);padding-top:8px}
     <p class="hint">Ikke oppgi navn, fødselsnummer eller annet som identifiserer pasienten.</p>
   </section>
 
+  <!-- 1) Ubesvarte takster: forsvinner etter hvert som legen svarer ja/nei -->
   <section id="resultat" hidden>
-    <h2>Takster – si ja eller nei</h2>
+    <h2>Takster – si ja eller nei <span class="pill" id="igjen-ant" hidden></span></h2>
     <div class="tl" id="takstliste"></div>
+    <div class="actions" id="jaresten-rad" style="margin-top:8px" hidden><button class="btn secondary small" id="jaresten">Ja til alle foreslåtte</button></div>
     <div id="meldinger" style="display:grid;gap:8px;margin-top:8px"></div>
-    <div class="actions" style="margin-top:10px"><button class="btn secondary small" id="rerun">Spør på nytt med svarene mine</button></div>
+  </section>
+
+  <!-- 2) Oppsummering av takstkoder + 3) priser -->
+  <section class="card" id="oppsum" hidden>
+    <h2>Regningskort</h2>
+    <code class="kode" id="linje" style="display:block;white-space:normal;overflow-wrap:anywhere;font-size:17px;margin-bottom:8px">–</code>
+    <div id="oppsum-linjer" class="opl"></div>
+    <div class="actions" style="margin-top:10px"><button class="btn small" id="kopier">Kopier takstlinje</button><button class="btn secondary small" id="rerun">Spør på nytt med svarene mine</button></div>
+    <div class="priser" id="priser"></div>
+  </section>
+
+  <!-- 4) Søk i takster (alltid synlig; «Legg til» når det finnes et forslag) -->
+  <section class="card ref">
+    <h2>Slå opp takst</h2>
+    <input id="sok" placeholder="Søk: 2cd, EKG, sykmelding …" autocomplete="off">
+    <div class="list" id="ref-list"></div>
+  </section>
+
+  <!-- 5) Alt som er besvart – kan endres hvis man tastet feil -->
+  <section id="besvart" hidden>
+    <h2>Besvart <span class="pill" id="besvart-ant"></span></h2>
+    <p class="hint" style="margin:0 0 8px">Tastet du feil? Bytt svar her, så oppdateres regningskortet.</p>
+    <div class="tl" id="besvart-liste"></div>
     <div id="journal" hidden class="card" style="margin-top:12px"><h2>Må stå i journalen</h2><ul class="journal" id="j-list"></ul></div>
     <details style="margin-top:10px"><summary>Vis modellens råsvar</summary><pre id="raw" style="white-space:pre-wrap;font-size:12px;color:var(--muted)"></pre></details>
   </section>
-
 
   <section class="card" id="hist">
     <h2>Historikk</h2>
     <p class="hint">Dine egne registreringer, nyeste først. Bare du ser dem. Slett rader du ikke vil beholde.</p>
     <div id="hist-list"></div>
     <div class="actions" style="margin-top:8px"><button class="btn secondary" id="hist-more" hidden>Vis flere</button></div>
-  </section>
-  <section class="card ref">
-    <h2>Slå opp takst</h2>
-    <input id="sok" placeholder="Søk: 2cd, EKG, sykmelding …" autocomplete="off">
-    <div class="list" id="ref-list"></div>
   </section>
 
   </div>
@@ -160,8 +191,7 @@ footer{font-size:12px;color:var(--muted);padding-top:8px}
 <div class="sumbar" id="sumbar" hidden>
   <div class="in">
     <div><div class="tot" id="sum-tot">0 kr</div><div class="det" id="sum-det"></div></div>
-    <button class="btn small" id="kopier">Kopier takstlinje</button>
-    <code id="linje"></code>
+    <button class="btn small" id="kopier2">Kopier takstlinje</button>
   </div>
 </div>
 
@@ -388,7 +418,9 @@ footer{font-size:12px;color:var(--muted);padding-top:8px}
 (function(){
   const $=s=>document.querySelector(s);
   const E=window.Takstmotor;
-  const state={modus:'fastlege_dag',alder:'16-69',flagg:{},valg:{},forslag:null,raw:''};
+  const state={modus:'fastlege_dag',alder:'16-69',flagg:{},valg:{},rekke:[],forslag:null,raw:''};
+  // Ett sted å sette ja/nei: samme svar igjen = angre; rekkefølgen huskes så «Besvart» viser nyeste nederst
+  function settValg(k,v){ if(state.valg[k]===v){delete state.valg[k];state.rekke=state.rekke.filter(x=>x!==k);} else {state.valg[k]=v; if(!state.rekke.includes(k)) state.rekke.push(k);} }
   try{const s=JSON.parse(localStorage.getItem('ta_state')||'{}'); if(s.modus) state.modus=s.modus; if(s.alder) state.alder=s.alder;}catch(e){}
 
   function seg(id,onchange,multi){
@@ -410,7 +442,9 @@ footer{font-size:12px;color:var(--muted);padding-top:8px}
   function renderRef(q){
     q=(q||'').trim().toLowerCase();
     const items=window.TAKSTDATA.takster.filter(t=>!q||t.kode.toLowerCase().includes(q)||t.ordlyd.toLowerCase().includes(q)).slice(0,60);
-    refList.innerHTML=items.map(t=>`<div class="item"><span class="kode">${t.kode}</span>${t.honorar!=null?`<b>${t.honorar} kr</b>`:(t.egenbetaling!=null?`<b>egenbet. ${t.egenbetaling} kr</b>`:'')}${t.egenandel?` · egenandel ${t.egenandel}`:''}${t.kunSpesialist?' <span class="pill">spesialist</span>':''}<br>${esc(t.ordlyd)}</div>`).join('')||'<div class="item">Ingen treff.</div>';
+    const aktiv=!!state.forslag, med=new Set((state.sist?.linjer||[]).map(l=>l.kode));
+    refList.innerHTML=items.map(t=>`<div class="item">${aktiv&&!t.kunSpesialist?`<button class="legg" data-legg="${t.kode}" ${med.has(t.kode)||state.valg[t.kode]!==undefined?'disabled':''}>${med.has(t.kode)?'På kortet':(state.valg[t.kode]===false?'Sagt nei':'+ Legg til')}</button>`:''}<span class="kode">${t.kode}</span>${t.honorar!=null?`<b>${t.honorar} kr</b>`:(t.egenbetaling!=null?`<b>egenbet. ${t.egenbetaling} kr</b>`:'')}${t.egenandel?` · egenandel ${t.egenandel}`:''}${t.kunSpesialist?' <span class="pill">spesialist</span>':''}<br>${esc(t.ordlyd)}</div>`).join('')||'<div class="item">Ingen treff.</div>';
+    refList.querySelectorAll('[data-legg]').forEach(b=>b.addEventListener('click',()=>{settValg(b.dataset.legg,true);render();}));
   }
   $('#sok').addEventListener('input',e=>renderRef(e.target.value)); renderRef('');
   function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
@@ -427,7 +461,7 @@ footer{font-size:12px;color:var(--muted);padding-top:8px}
     rec.start(); lytter=true; $('#mic').textContent='■ Stopp';
   });}
 
-  $('#clear').addEventListener('click',()=>{$('#tekst').value='';state.forslag=null;state.histId=null;state.valg={};$('#resultat').hidden=true;$('#sumbar').hidden=true;$('#status').textContent='';});
+  $('#clear').addEventListener('click',()=>{$('#tekst').value='';state.forslag=null;state.sist=null;state.histId=null;state.valg={};state.rekke=[];['#resultat','#oppsum','#besvart','#sumbar'].forEach(s=>$(s).hidden=true);$('#status').textContent='';renderRef($('#sok').value);});
 
   // ---- Claude
   const CONFIG_URL='https://jsgfbxbjmnyvrdauqnge.supabase.co/functions/v1/portal';
@@ -548,48 +582,105 @@ Svar KUN med ett JSON-objekt på denne formen:
       $('#status').textContent=m; if(e.text){state.raw=e.text;$('#raw').textContent=e.text;}
     }finally{$('#go').disabled=false;}
   }
-  $('#go').addEventListener('click',()=>{state.valg={};state.histId=null;state._scrolled=false;kjør();});
+  $('#go').addEventListener('click',()=>{state.valg={};state.rekke=[];state.histId=null;state._scrolled=false;kjør();});
   $('#rerun').addEventListener('click',kjør);
 
   function tog(kode,val){return `<div class="tog" role="group"><button class="ja" data-k="${kode}" data-v="1" aria-pressed="${val===true}">Ja</button><button class="nei" data-k="${kode}" data-v="0" aria-pressed="${val===false}">Nei</button></div>`;}
+  function prisTekst(t,antall){antall=antall||1;return t.honorar!=null?kr(t.honorar*antall):(t.egenbetaling!=null?kr(t.egenbetaling*antall)+' egenbet.':'');}
+  function kortLinje(l,val,ekstra){
+    const t=E.BY[l.kode]||{ordlyd:''};
+    return `<div class="tk${val===false?' off':''}" data-kode="${l.kode}"><div><div class="hd"><span class="kode">${l.kode}${l.antall>1?' ×'+l.antall:''}</span>${l.kilde==='motor'?'<span class="pill">regel</span>':''}${l.kilde==='lege'?'<span class="pill">lagt til</span>':''}<span class="pris">${prisTekst(t,l.antall)}${t.egenandel?' · egenandel '+kr(t.egenandel*(l.antall||1)):''}</span></div><div class="tx">${esc(t.ordlyd.slice(0,120))}${t.ordlyd.length>120?'…':''}</div>${l.grunn?`<div class="gr">${esc(l.grunn)}</div>`:''}${l.frekvens?`<div class="tx"><i>${esc(l.frekvens)}</i></div>`:''}${l.journal?`<div class="jr">Journal: ${esc(l.journal)}</div>`:''}${ekstra||''}</div>${tog(l.kode,val)}</div>`;
+  }
+  function kortSporsmal(q,val){
+    const t=E.BY[q.kode];
+    return `<div class="tk q" data-kode="${q.kode}"><div><div class="hd"><span class="kode">${q.kode}</span><span class="pill">spørsmål</span><span class="pris">${prisTekst(t)}</span></div><div class="gr">${esc(q.sporsmal)}</div><div class="tx">${esc(t.ordlyd.slice(0,120))}${t.ordlyd.length>120?'…':''}</div></div>${tog(q.kode,val)}</div>`;
+  }
+  function kobleTog(root){
+    root.querySelectorAll('.tog button').forEach(b=>b.addEventListener('click',()=>{
+      const k=b.dataset.k,v=b.dataset.v==='1';
+      settValg(k,v);
+      const kort=b.closest('.tk');
+      // Ubesvart kort: la det gli ut før listen tegnes på nytt
+      if(kort&&kort.parentElement.id==='takstliste'&&!matchMedia('(prefers-reduced-motion:reduce)').matches){kort.classList.add('ferdig');setTimeout(render,170);}
+      else render();
+    }));
+  }
 
   function render(){
     const f=state.forslag; if(!f) return;
     const ctx={modus:state.modus,spesialist:false,alder:state.alder,fritak:!!state.flagg.fritak,annenFastlege:!!state.flagg.annenFastlege,utenforOrdning:!!state.flagg.utenforOrdning};
     const r=E.evaluer(f,ctx,state.valg);
-    const kort=[];
-    for(const l of r.linjer){
-      const pris=l.honorar!=null?kr(l.honorar*l.antall):(l.egenbetaling!=null?kr(l.egenbetaling*l.antall)+' egenbet.':'');
-      kort.push(`<div class="tk"><div><div class="hd"><span class="kode">${l.kode}${l.antall>1?' ×'+l.antall:''}</span>${l.kilde==='motor'?'<span class="pill">regel</span>':''}<span class="pris">${pris}${l.egenandel?' · egenandel '+kr(l.egenandel*l.antall):''}</span></div><div class="tx">${esc(l.ordlyd.slice(0,120))}${l.ordlyd.length>120?'…':''}</div>${l.grunn?`<div class="gr">${esc(l.grunn)}</div>`:''}${l.frekvens?`<div class="tx"><i>${esc(l.frekvens)}</i></div>`:''}${l.journal?`<div class="jr">Journal: ${esc(l.journal)}</div>`:''}</div>${tog(l.kode,true)}</div>`);
-    }
-    for(const q of r.usikre){
-      const t=E.BY[q.kode]; const pris=t.honorar!=null?kr(t.honorar):(t.egenbetaling!=null?kr(t.egenbetaling)+' egenbet.':'');
-      kort.push(`<div class="tk q"><div><div class="hd"><span class="kode">${q.kode}</span><span class="pill">spørsmål</span><span class="pris">${pris}</span></div><div class="gr">${esc(q.sporsmal)}</div><div class="tx">${esc(t.ordlyd.slice(0,120))}${t.ordlyd.length>120?'…':''}</div></div>${tog(q.kode,state.valg[q.kode])}</div>`);
-    }
-    for(const a of r.avvalgt){
-      kort.push(`<div class="tk off"><div><div class="hd"><span class="kode">${a.kode}</span></div><div class="tx">${esc(a.ordlyd.slice(0,100))}${a.ordlyd.length>100?'…':''}</div></div>${tog(a.kode,false)}</div>`);
-    }
-    $('#takstliste').innerHTML=kort.join('')||'<div class="note warn">Ingen takster foreslått.</div>';
-    $('#takstliste').querySelectorAll('.tog button').forEach(b=>b.addEventListener('click',()=>{const k=b.dataset.k,v=b.dataset.v==='1'; if(state.valg[k]===v) delete state.valg[k]; else state.valg[k]=v; render();}));
+    const svart=k=>state.valg[k]!==undefined;
+
+    // 1) Ubesvarte: foreslåtte linjer uten svar + spørsmål uten svar
+    const igjen=[];
+    for(const l of r.linjer){ if(!svart(l.kode)) igjen.push(kortLinje(l,undefined)); }
+    for(const q of r.usikre){ if(!svart(q.kode)) igjen.push(kortSporsmal(q,undefined)); }
+    $('#takstliste').innerHTML=igjen.join('')||(r.linjer.length||Object.keys(state.valg).length?'<div class="note ok">Alle takster er besvart. Regningskortet står under.</div>':'<div class="note warn">Ingen takster foreslått.</div>');
+    $('#igjen-ant').hidden=!igjen.length; $('#igjen-ant').textContent=igjen.length+' igjen';
+    $('#jaresten-rad').hidden=r.linjer.filter(l=>!svart(l.kode)).length<2;
+    kobleTog($('#takstliste'));
+
+    // Meldinger (fjernet / sjekk / info)
     let m='';
     if(r.fjernet.length) m+=`<div class="note bad"><b>Fjernet automatisk</b><ul>${r.fjernet.map(x=>`<li><span class="kode" style="font-size:13px">${x.kode}</span> – ${esc(x.hvorfor)}</li>`).join('')}</ul></div>`;
     if(r.advarsler.length||r.mangler.length) m+=`<div class="note warn"><b>Sjekk</b><ul>${[...r.advarsler,...r.mangler].map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`;
     if(r.info.length) m+=`<div class="note ok"><ul>${r.info.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`;
     $('#meldinger').innerHTML=m;
+
+    // 2) Oppsummering av takstkoder
+    $('#linje').textContent=r.regningslinje||'–';
+    $('#oppsum-linjer').innerHTML=r.linjer.map(l=>`<div class="r"><span class="kode">${l.kode}${l.antall>1?'×'+l.antall:''}</span><span>${esc(l.ordlyd.slice(0,60))}${l.ordlyd.length>60?'…':''}${svart(l.kode)?'':' <i>(ikke besvart)</i>'}</span><span class="p">${kr(l.sum)}</span></div>`).join('')||'<div class="r"><span></span><span>Ingen takster på kortet ennå.</span><span></span></div>';
+
+    // 3) Priser
+    const tot=r.sum.honorar+r.sum.egenbetaling;
+    $('#priser').innerHTML=
+      `<div class="r"><span>Honorar (takster)</span><span>${kr(r.sum.honorar)}</span></div>`+
+      (r.sum.egenbetaling?`<div class="r"><span>Materiell / egenbetaling</span><span>${kr(r.sum.egenbetaling)}</span></div>`:'')+
+      `<div class="r"><span>Refusjon fra Helfo</span><span>${kr(r.sum.refusjon)}</span></div>`+
+      `<div class="r pas"><span>Pasienten betaler${(ctx.fritak||ctx.alder==='<16')?' <span class="m">(fritak egenandel)</span>':''}</span><span>${kr(r.sum.pasientBetaler)}</span></div>`+
+      `<div class="r tot"><span>Sum</span><span>${kr(tot)}</span></div>`;
+
+    // 5) Besvart – alt legen har tatt stilling til, i den rekkefølgen det ble svart
+    const besvart=[];
+    for(const k of state.rekke.filter(k=>state.valg[k]!==undefined)){
+      const v=state.valg[k];
+      const l=r.linjer.find(x=>x.kode===k);
+      if(l){besvart.push(kortLinje(l,true));continue;}
+      const fj=r.fjernet.find(x=>x.kode===k);
+      if(v===true&&fj){besvart.push(kortLinje({kode:k,antall:1,kilde:'lege'},true,`<div class="jr">Ikke på kortet: ${esc(fj.hvorfor)}</div>`));continue;}
+      const q=(f.usikre||[]).find(x=>x&&x.kode===k);
+      if(q&&E.BY[k]){besvart.push(kortSporsmal(q,v));continue;}
+      if(E.BY[k]) besvart.push(kortLinje({kode:k,antall:1},v));
+    }
+    $('#besvart-liste').innerHTML=besvart.join('');
+    $('#besvart-ant').textContent=besvart.length;
+    $('#besvart').hidden=!besvart.length;
+    kobleTog($('#besvart-liste'));
+
     const j=[...new Set(r.journalFraModell)];
     $('#journal').hidden=!j.length; $('#j-list').innerHTML=j.map(x=>`<li>${esc(x)}</li>`).join('');
     $('#raw').textContent=state.raw;
-    // Sum nederst
-    $('#sum-tot').textContent=kr(r.sum.honorar+r.sum.egenbetaling);
-    $('#sum-det').textContent=`Helfo ${kr(r.sum.refusjon)} · pasient ${kr(r.sum.pasientBetaler)}${r.sum.egenbetaling?' (materiell '+kr(r.sum.egenbetaling)+')':''}`;
-    $('#linje').textContent=r.regningslinje||'–';
+    // Fast sumlinje nederst
+    $('#sum-tot').textContent=kr(tot);
+    $('#sum-det').textContent=`Helfo ${kr(r.sum.refusjon)} · pasient ${kr(r.sum.pasientBetaler)}${igjen.length?' · '+igjen.length+' igjen å svare på':''}`;
     $('#sumbar').hidden=false;
-    if(!state._scrolled){$('#resultat').hidden=false;$('#resultat').scrollIntoView({behavior:'smooth',block:'start'});state._scrolled=true;}
-    $('#resultat').hidden=false;
-    state.sist=r; lagreHistorikk(r);
+    $('#resultat').hidden=false; $('#oppsum').hidden=false;
+    if(!state._scrolled){$('#resultat').scrollIntoView({behavior:'smooth',block:'start'});state._scrolled=true;}
+    state.sist=r; renderRef($('#sok').value); lagreHistorikk(r);
   }
 
-  $('#kopier').addEventListener('click',()=>{const t=$('#linje').textContent; navigator.clipboard?.writeText(t).then(()=>{$('#kopier').textContent='Kopiert';setTimeout(()=>$('#kopier').textContent='Kopier takstlinje',1500);}).catch(()=>{const r=document.createRange();r.selectNodeContents($('#linje'));const s=getSelection();s.removeAllRanges();s.addRange(r);});});
+  $('#jaresten').addEventListener('click',()=>{
+    const r=state.sist; if(!r) return;
+    for(const l of r.linjer) if(state.valg[l.kode]===undefined) settValg(l.kode,true);
+    render();
+  });
+
+  function kopier(btn){const t=$('#linje').textContent; navigator.clipboard?.writeText(t).then(()=>{btn.textContent='Kopiert';setTimeout(()=>btn.textContent='Kopier takstlinje',1500);}).catch(()=>{const r=document.createRange();r.selectNodeContents($('#linje'));const s=getSelection();s.removeAllRanges();s.addRange(r);});}
+  $('#kopier').addEventListener('click',()=>kopier($('#kopier')));
+  $('#kopier2').addEventListener('click',()=>kopier($('#kopier2')));
+  window.__ta={state,render}; // feilsøking i konsollen
 })();
+
 </script>
 </body></html>

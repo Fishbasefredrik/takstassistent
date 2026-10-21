@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="112" fill="#0f6e7a"/>
+
+  <!-- Hår: rund topp, lange sider -->
+  <path d="M136 200 c0 -85 55 -135 120 -135 s120 50 120 135 v110 c0 25 -15 40 -40 40 h-40 v-40 h-80 v40 h-40 c-25 0 -40 -15 -40 -40 z" fill="#083e46"/>
+
+  <!-- Ansikt -->
+  <circle cx="256" cy="212" r="92" fill="#ffffff"/>
+  <!-- Pannelugg -->
+  <path d="M166 190 c8 -62 45 -90 90 -90 s82 28 90 90 c-28 -30 -55 -42 -90 -42 s-62 12 -90 42 z" fill="#083e46"/>
+
+  <!-- Dollar-øyne -->
+  <text x="220" y="240" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="bold" text-anchor="middle" fill="#0f6e7a">$</text>
+  <text x="292" y="240" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="bold" text-anchor="middle" fill="#0f6e7a">$</text>
+  <!-- Munn -->
+  <path d="M232 270 q24 18 48 0" fill="none" stroke="#0f6e7a" stroke-width="9" stroke-linecap="round"/>
+
+  <!-- Stetoskop -->
+  <g fill="none" stroke="#ffffff" stroke-width="16" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Bøyler fra ørene, samles under haka -->
+    <path d="M166 226 c-6 60 28 100 90 116"/>
+    <path d="M346 226 c6 60 -28 100 -90 116"/>
+    <!-- Slange: ned, bue, opp til klokka -->
+    <path d="M256 342 v40 c0 60 45 95 90 90 c35 -4 50 -30 50 -55"/>
+  </g>
+  <circle cx="166" cy="222" r="14" fill="#ffffff"/>
+  <circle cx="346" cy="222" r="14" fill="#ffffff"/>
+  <!-- Klokke -->
+  <circle cx="400" cy="398" r="38" fill="#0f6e7a" stroke="#ffffff" stroke-width="12"/>
+  <circle cx="400" cy="398" r="17" fill="#ffffff"/>
+</svg>

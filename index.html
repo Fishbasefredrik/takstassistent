@@ -82,12 +82,8 @@ footer{font-size:12px;color:var(--muted);padding-top:8px}
     <div class="row">
       <label for="epost">E-post</label>
       <input id="epost" type="email" autocomplete="email" placeholder="navn@eksempel.no" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit;background:var(--bg);color:var(--fg)">
-      <div class="actions"><button class="btn" id="sendkode">Send engangskode</button><span class="status" id="login-status"></span></div>
-      <div id="kodefelt" hidden>
-        <label for="kode">Kode fra e-posten</label>
-        <input id="kode" inputmode="numeric" autocomplete="one-time-code" placeholder="123456" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit;background:var(--bg);color:var(--fg)">
-        <div class="actions" style="margin-top:8px"><button class="btn" id="verifiser">Logg inn</button></div>
-      </div>
+      <div class="actions"><button class="btn" id="sendkode">Send innloggingslenke</button><span class="status" id="login-status"></span></div>
+      <p class="hint">Du får en e-post med en lenke. Trykk på den, så er du inne. Bare godkjente e-postadresser får tilgang.</p>
     </div>
   </section>
   <div id="app" hidden>
@@ -427,14 +423,13 @@ footer{font-size:12px;color:var(--muted);padding-top:8px}
   let PORTAL=window.__PORTAL||null, sb=null;
   async function initPortal(){
     if(!PORTAL){ try{ PORTAL=await (await fetch(CONFIG_URL)).json(); }catch(e){ $('#login-status').textContent='Får ikke kontakt med serveren. Prøv igjen.'; return; } }
-    sb=window.supabase.createClient(PORTAL.url,PORTAL.anonKey);
+    sb=window.supabase.createClient(PORTAL.url,PORTAL.anonKey,{auth:{flowType:'implicit',detectSessionInUrl:true,persistSession:true}});
     sb.auth.getSession().then(({data})=>visApp(data.session)); sb.auth.onAuthStateChange((_e,s)=>visApp(s));
   }
   initPortal();
   let session=null;
   async function visApp(s){session=s;$('#login').hidden=!!s;$('#app').hidden=!s;$('#loggut').hidden=!s;if(s)lastHistorikk();}
-  $('#sendkode').addEventListener('click',async()=>{if(!sb){$('#login-status').textContent='Vent litt …';return;}const email=$('#epost').value.trim();if(!email){$('#login-status').textContent='Skriv inn e-post.';return;}$('#sendkode').disabled=true;$('#login-status').textContent='Sender …';const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});$('#sendkode').disabled=false;if(error){$('#login-status').textContent='Kunne ikke sende kode: '+error.message;return;}$('#login-status').textContent='Kode sendt – sjekk e-posten (også søppelpost).';$('#kodefelt').hidden=false;});
-  $('#verifiser').addEventListener('click',async()=>{const email=$('#epost').value.trim(),token=$('#kode').value.trim();$('#login-status').textContent='Sjekker …';const {error}=await sb.auth.verifyOtp({email,token,type:'email'});if(error){$('#login-status').textContent='Feil kode eller utløpt: '+error.message;return;}$('#login-status').textContent='';});
+  $('#sendkode').addEventListener('click',async()=>{if(!sb){$('#login-status').textContent='Vent litt …';return;}const email=$('#epost').value.trim();if(!email){$('#login-status').textContent='Skriv inn e-post.';return;}$('#sendkode').disabled=true;$('#login-status').textContent='Sender …';const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});$('#sendkode').disabled=false;if(error){$('#login-status').textContent='Kunne ikke sende kode: '+error.message;return;}$('#login-status').textContent='Lenke sendt – sjekk e-posten (også søppelpost) og trykk på lenken.';});
   $('#loggut').addEventListener('click',()=>sb.auth.signOut());
   // ---- Historikk (RLS: bare egne rader)
   const MODUSNAVN={fastlege_dag:'Fastlege dag',fastlege_kveld:'Fastlege kveld',legevakt_dag:'Legevakt dag',legevakt_kveld:'Legevakt kveld'};

@@ -74,16 +74,27 @@ footer{font-size:12px;color:var(--muted);padding-top:8px}
 <div class="wrap">
   <header>
     <div><h1>Takstassistent</h1><div class="sub">Normaltariffen 1.7.2026 · ikke spesialist</div></div>
-    <div class="sub" id="status-top"><button class="btn secondary" id="loggut" hidden style="padding:4px 10px;font-weight:500">Logg ut</button></div>
+    <div class="sub" id="status-top"><button class="btn secondary small" id="byttpin" hidden>Bytt PIN</button> <button class="btn secondary small" id="loggut" hidden>Logg ut</button></div>
   </header>
 
   <section class="card" id="login">
     <h2>Logg inn</h2>
     <div class="row">
       <label for="epost">E-post</label>
-      <input id="epost" type="email" autocomplete="email" placeholder="navn@eksempel.no" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;font:inherit;background:var(--bg);color:var(--fg)">
-      <div class="actions"><button class="btn" id="sendkode">Send innloggingslenke</button><span class="status" id="login-status"></span></div>
-      <p class="hint">Du får en e-post med en lenke. Trykk på den, så er du inne. Bare godkjente e-postadresser får tilgang.</p>
+      <input id="epost" type="email" autocomplete="username" placeholder="navn@eksempel.no" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:16px;background:var(--bg);color:var(--fg)">
+      <label for="pin">PIN (4 siffer)</label>
+      <input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password" placeholder="••••" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:20px;letter-spacing:.3em;background:var(--bg);color:var(--fg)">
+      <div class="actions"><button class="btn" id="loginpin">Logg inn</button><span class="status" id="login-status"></span></div>
+      <div class="actions" style="margin-top:6px"><span class="hint" style="margin:0">Første gang, eller glemt PIN?</span><button class="btn secondary small" id="sendkode">Send innloggingslenke</button></div>
+    </div>
+  </section>
+  <section class="card" id="pinsetup" hidden>
+    <h2>Velg PIN</h2>
+    <p class="hint" style="margin:0 0 8px">Velg 4 siffer du logger inn med heretter. Du forblir innlogget på denne enheten til du logger ut.</p>
+    <div class="row">
+      <input id="pin1" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" placeholder="Ny PIN" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:20px;letter-spacing:.3em;background:var(--bg);color:var(--fg)">
+      <input id="pin2" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password" placeholder="Gjenta PIN" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;font-size:20px;letter-spacing:.3em;background:var(--bg);color:var(--fg)">
+      <div class="actions"><button class="btn" id="lagrepin">Lagre PIN</button><button class="btn secondary small" id="avbrytpin" hidden>Avbryt</button><span class="status" id="pin-status"></span></div>
     </div>
   </section>
   <div id="app" hidden>
@@ -428,8 +439,38 @@ footer{font-size:12px;color:var(--muted);padding-top:8px}
   }
   initPortal();
   let session=null;
-  async function visApp(s){session=s;$('#login').hidden=!!s;$('#app').hidden=!s;$('#loggut').hidden=!s;if(s)lastHistorikk();}
-  $('#sendkode').addEventListener('click',async()=>{if(!sb){$('#login-status').textContent='Vent litt …';return;}const email=$('#epost').value.trim();if(!email){$('#login-status').textContent='Skriv inn e-post.';return;}$('#sendkode').disabled=true;$('#login-status').textContent='Sender …';const {error}=await sb.auth.signInWithOtp({email,options:{emailRedirectTo:location.origin+location.pathname}});$('#sendkode').disabled=false;if(error){$('#login-status').textContent='Kunne ikke sende kode: '+error.message;return;}$('#login-status').textContent='Lenke sendt – sjekk e-posten (også søppelpost) og trykk på lenken.';});
+  const pinToPw=pin=>'takst-'+pin+'-'+pin;
+  const okPin=p=>/^\d{4}$/.test(p);
+  try{const e=localStorage.getItem('ta_email'); if(e) $('#epost').value=e;}catch(e){}
+  async function visApp(s){
+    session=s; const inne=!!s; const harPin=!!(s&&s.user&&s.user.user_metadata&&s.user.user_metadata.pin_set);
+    $('#login').hidden=inne; $('#pinsetup').hidden=!(inne&&!harPin); $('#avbrytpin').hidden=true;
+    $('#app').hidden=!(inne&&harPin); $('#loggut').hidden=!inne; $('#byttpin').hidden=!(inne&&harPin);
+    if(inne){ try{localStorage.setItem('ta_email',s.user.email||'');}catch(e){} if(harPin) lastHistorikk(); }
+  }
+  $('#loginpin').addEventListener('click',async()=>{
+    if(!sb){$('#login-status').textContent='Vent litt …';return;}
+    const email=$('#epost').value.trim(), pin=$('#pin').value.trim();
+    if(!email){$('#login-status').textContent='Skriv inn e-post.';return;}
+    if(!okPin(pin)){$('#login-status').textContent='PIN er 4 siffer.';return;}
+    $('#loginpin').disabled=true; $('#login-status').textContent='Logger inn …';
+    const {error}=await sb.auth.signInWithPassword({email,password:pinToPw(pin)});
+    $('#loginpin').disabled=false; $('#pin').value='';
+    $('#login-status').textContent=error?'Feil e-post eller PIN. Første gang, eller glemt PIN? Bruk innloggingslenke.':'';
+  });
+  $('#pin').addEventListener('keydown',e=>{if(e.key==='Enter')$('#loginpin').click();});
+  $('#lagrepin').addEventListener('click',async()=>{
+    const p1=$('#pin1').value.trim(), p2=$('#pin2').value.trim();
+    if(!okPin(p1)){$('#pin-status').textContent='PIN må være 4 siffer.';return;}
+    if(p1!==p2){$('#pin-status').textContent='PIN-ene er ikke like.';return;}
+    $('#lagrepin').disabled=true; $('#pin-status').textContent='Lagrer …';
+    const {data,error}=await sb.auth.updateUser({password:pinToPw(p1),data:{pin_set:true}});
+    $('#lagrepin').disabled=false; $('#pin1').value=''; $('#pin2').value='';
+    if(error){$('#pin-status').textContent='Kunne ikke lagre PIN: '+error.message;return;}
+    $('#pin-status').textContent=''; const {data:{session:s}}=await sb.auth.getSession(); visApp(s);
+  });
+  $('#byttpin').addEventListener('click',()=>{$('#app').hidden=true;$('#pinsetup').hidden=false;$('#avbrytpin').hidden=false;});
+  $('#avbrytpin').addEventListener('click',()=>visApp(session));
   $('#loggut').addEventListener('click',()=>sb.auth.signOut());
   // ---- Historikk (RLS: bare egne rader)
   const MODUSNAVN={fastlege_dag:'Fastlege dag',fastlege_kveld:'Fastlege kveld',legevakt_dag:'Legevakt dag',legevakt_kveld:'Legevakt kveld'};
